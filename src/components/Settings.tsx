@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import BottomNav from './BottomNav';
 import { DictationSettings, View } from '../types';
 
@@ -10,7 +10,38 @@ interface SettingsProps {
 }
 
 export default function Settings({ settings, onSettingsChange, currentView, onViewChange }: SettingsProps) {
-  const updateSetting = (key: keyof DictationSettings, value: number) => {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      const zhVoices = availableVoices.filter(v => v.lang.startsWith('zh'));
+      setVoices(zhVoices);
+    };
+
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (voices.length > 0 && !settings.voiceURI) {
+      const defaultVoice = voices.find(v => 
+        v.lang === 'zh-CN' && 
+        !v.name.toLowerCase().includes('cantonese') && 
+        !v.name.toLowerCase().includes('hk') &&
+        !v.name.toLowerCase().includes('tw') &&
+        !v.name.includes('粤')
+      ) || voices.find(v => v.lang === 'zh-CN') || voices[0];
+      
+      if (defaultVoice) {
+        onSettingsChange({ ...settings, voiceURI: defaultVoice.voiceURI });
+      }
+    }
+  }, [voices, settings.voiceURI, onSettingsChange, settings]);
+
+  const updateSetting = (key: keyof DictationSettings, value: number | string) => {
     onSettingsChange({ ...settings, [key]: value });
   };
 
@@ -22,6 +53,29 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
 
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <h3 className="text-slate-900 text-xl font-bold leading-tight tracking-tight mb-6">听写参数设置</h3>
+
+        <div className="bg-white p-4 rounded-xl mb-4 shadow-sm">
+          <div className="flex w-full items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary text-xl">record_voice_over</span>
+              <p className="text-slate-900 text-base font-medium">朗读声音 (普通话)</p>
+            </div>
+          </div>
+          <div className="flex w-full items-center gap-4">
+            <select 
+              value={settings.voiceURI || ''}
+              onChange={(e) => updateSetting('voiceURI', e.target.value)}
+              className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-primary/40 outline-none"
+            >
+              {voices.length === 0 && <option value="">加载声音中...</option>}
+              {voices.map(voice => (
+                <option key={voice.voiceURI} value={voice.voiceURI}>
+                  {voice.name} ({voice.lang})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div className="flex items-center gap-4 bg-white p-4 rounded-xl mb-4 shadow-sm">
           <div className="flex items-center gap-4 flex-1">

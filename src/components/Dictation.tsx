@@ -44,6 +44,28 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
       utterance.lang = 'zh-CN';
       utterance.rate = speed;
       
+      const voices = window.speechSynthesis.getVoices();
+      if (settings.voiceURI) {
+        const selectedVoice = voices.find(v => v.voiceURI === settings.voiceURI);
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+      } else {
+        // Fallback to finding a Mandarin voice if none selected
+        const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+        const defaultVoice = zhVoices.find(v => 
+          v.lang === 'zh-CN' && 
+          !v.name.toLowerCase().includes('cantonese') && 
+          !v.name.toLowerCase().includes('hk') &&
+          !v.name.toLowerCase().includes('tw') &&
+          !v.name.includes('粤')
+        ) || zhVoices.find(v => v.lang === 'zh-CN');
+        
+        if (defaultVoice) {
+          utterance.voice = defaultVoice;
+        }
+      }
+      
       utterance.onend = () => resolve();
       utterance.onerror = () => resolve();
       

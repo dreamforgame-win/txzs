@@ -5,6 +5,7 @@ export interface DictationSettings {
   repeatInterval: number;
   switchInterval: number;
   speechSpeed: number;
+  voiceURI?: string;
 }
 
 export const defaultSettings: DictationSettings = {
@@ -12,6 +13,7 @@ export const defaultSettings: DictationSettings = {
   repeatInterval: 2,
   switchInterval: 8,
   speechSpeed: 0.9,
+  voiceURI: '',
 };
 
 export interface HistoryRecord {
