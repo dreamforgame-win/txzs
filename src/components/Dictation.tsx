@@ -39,54 +39,65 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
 
   const speak = (text: string, speed: number): Promise<void> => {
     return new Promise((resolve) => {
-      window.speechSynthesis.cancel();
+      if (!window.speechSynthesis) {
+        resolve();
+        return;
+      }
       
-      setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = speed;
+      try {
+        window.speechSynthesis.cancel();
         
-        const voices = window.speechSynthesis.getVoices();
-        let voiceSet = false;
-        
-        if (settings.voiceName) {
-          const selectedVoice = voices.find(v => v.name === settings.voiceName);
-          if (selectedVoice) {
-            utterance.lang = selectedVoice.lang; // Order matters: set lang FIRST
-            utterance.voice = selectedVoice;     // Set voice SECOND
-            voiceSet = true;
-          }
-        } 
-        
-        if (!voiceSet) {
-          // Fallback to finding a Mandarin voice if none selected
-          const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
-          const defaultVoice = zhVoices.find(v => v.name.includes('Tingting') || v.name.includes('Ting-Ting')) ||
-            zhVoices.find(v => 
-            v.lang === 'zh-CN' && 
-            !v.name.toLowerCase().includes('cantonese') && 
-            !v.name.toLowerCase().includes('hk') &&
-            !v.name.toLowerCase().includes('tw') &&
-            !v.name.includes('粤') &&
-            !v.name.includes('Sin-Ji') &&
-            !v.name.includes('Sinji')
-          ) || zhVoices.find(v => v.lang === 'zh-CN');
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.rate = speed;
           
-          if (defaultVoice) {
-            utterance.lang = defaultVoice.lang;
-            utterance.voice = defaultVoice;
-          } else {
-            utterance.lang = 'zh-CN';
+          const voices = window.speechSynthesis.getVoices() || [];
+          let voiceSet = false;
+          
+          if (settings.voiceName) {
+            const selectedVoice = voices.find(v => v && v.name === settings.voiceName);
+            if (selectedVoice) {
+              if (selectedVoice.lang) utterance.lang = selectedVoice.lang; // Order matters: set lang FIRST
+              utterance.voice = selectedVoice;     // Set voice SECOND
+              voiceSet = true;
+            }
+          } 
+          
+          if (!voiceSet) {
+            // Fallback to finding a Mandarin voice if none selected
+            const zhVoices = voices.filter(v => v && v.lang && typeof v.lang === 'string' && v.lang.startsWith('zh'));
+            const defaultVoice = zhVoices.find(v => v && v.name && (v.name.includes('Tingting') || v.name.includes('Ting-Ting'))) ||
+              zhVoices.find(v => 
+              v && v.lang === 'zh-CN' && 
+              v.name &&
+              !v.name.toLowerCase().includes('cantonese') && 
+              !v.name.toLowerCase().includes('hk') &&
+              !v.name.toLowerCase().includes('tw') &&
+              !v.name.includes('粤') &&
+              !v.name.includes('Sin-Ji') &&
+              !v.name.includes('Sinji')
+            ) || zhVoices.find(v => v && v.lang === 'zh-CN') || voices[0];
+            
+            if (defaultVoice) {
+              if (defaultVoice.lang) utterance.lang = defaultVoice.lang;
+              utterance.voice = defaultVoice;
+            } else {
+              utterance.lang = 'zh-CN';
+            }
           }
-        }
-        
-        utterance.volume = 1;
-        utterance.pitch = 1;
-        
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
-        
-        window.speechSynthesis.speak(utterance);
-      }, 50);
+          
+          utterance.volume = 1;
+          utterance.pitch = 1;
+          
+          utterance.onend = () => resolve();
+          utterance.onerror = () => resolve();
+          
+          window.speechSynthesis.speak(utterance);
+        }, 50);
+      } catch (e) {
+        console.error("Speech synthesis error:", e);
+        resolve();
+      }
     });
   };
 

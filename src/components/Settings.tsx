@@ -15,18 +15,23 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
   useEffect(() => {
     let retryCount = 0;
     const loadVoices = () => {
-      const availableVoices = window.speechSynthesis.getVoices();
-      if (availableVoices.length > 0) {
-        const zhVoices = availableVoices.filter(v => v.lang.startsWith('zh'));
-        setVoices(zhVoices);
-      } else if (retryCount < 10) {
-        retryCount++;
-        setTimeout(loadVoices, 200);
+      if (!window.speechSynthesis) return;
+      try {
+        const availableVoices = window.speechSynthesis.getVoices() || [];
+        if (availableVoices.length > 0) {
+          const zhVoices = availableVoices.filter(v => v && v.lang && typeof v.lang === 'string' && v.lang.startsWith('zh'));
+          setVoices(zhVoices);
+        } else if (retryCount < 10) {
+          retryCount++;
+          setTimeout(loadVoices, 200);
+        }
+      } catch (e) {
+        console.error("Error loading voices:", e);
       }
     };
 
     loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
   }, []);
@@ -34,18 +39,19 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
   useEffect(() => {
     if (voices.length > 0 && !settings.voiceName) {
       // Prioritize known iOS Mandarin voices like Tingting
-      const defaultVoice = voices.find(v => v.name.includes('Tingting') || v.name.includes('Ting-Ting')) ||
+      const defaultVoice = voices.find(v => v && v.name && (v.name.includes('Tingting') || v.name.includes('Ting-Ting'))) ||
         voices.find(v => 
-        v.lang === 'zh-CN' && 
+        v && v.lang === 'zh-CN' && 
+        v.name &&
         !v.name.toLowerCase().includes('cantonese') && 
         !v.name.toLowerCase().includes('hk') &&
         !v.name.toLowerCase().includes('tw') &&
         !v.name.includes('粤') &&
         !v.name.includes('Sin-Ji') &&
         !v.name.includes('Sinji')
-      ) || voices.find(v => v.lang === 'zh-CN') || voices[0];
+      ) || voices.find(v => v && v.lang === 'zh-CN') || voices[0];
       
-      if (defaultVoice) {
+      if (defaultVoice && defaultVoice.name) {
         onSettingsChange({ ...settings, voiceName: defaultVoice.name });
       }
     }
@@ -56,28 +62,33 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
   };
 
   const handleTestVoice = () => {
-    window.speechSynthesis.cancel();
-    
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance("测试普通话声音，春暖花开");
+    if (!window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
       
-      // CRITICAL FOR iOS: Always fetch fresh voice objects from the API.
-      // Do not use the voices from React state, as they might be detached/stale in WebKit.
-      const freshVoices = window.speechSynthesis.getVoices();
-      const selectedVoice = freshVoices.find(v => v.name === settings.voiceName);
-      
-      if (selectedVoice) {
-        utterance.lang = selectedVoice.lang; // Order matters: set lang FIRST
-        utterance.voice = selectedVoice;     // Set voice SECOND
-      } else {
-        utterance.lang = 'zh-CN';
-      }
-      
-      utterance.volume = 1;
-      utterance.pitch = 1;
-      
-      window.speechSynthesis.speak(utterance);
-    }, 50);
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance("测试普通话声音，春暖花开");
+        
+        // CRITICAL FOR iOS: Always fetch fresh voice objects from the API.
+        // Do not use the voices from React state, as they might be detached/stale in WebKit.
+        const freshVoices = window.speechSynthesis.getVoices() || [];
+        const selectedVoice = freshVoices.find(v => v && v.name === settings.voiceName);
+        
+        if (selectedVoice) {
+          if (selectedVoice.lang) utterance.lang = selectedVoice.lang; // Order matters: set lang FIRST
+          utterance.voice = selectedVoice;     // Set voice SECOND
+        } else {
+          utterance.lang = 'zh-CN';
+        }
+        
+        utterance.volume = 1;
+        utterance.pitch = 1;
+        
+        window.speechSynthesis.speak(utterance);
+      }, 50);
+    } catch (e) {
+      console.error("Test voice error:", e);
+    }
   };
 
   return (
