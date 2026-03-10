@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2424eb;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #111121;
+  --font-display: "Lexend", sans-serif;
+}
+
+body {
+  min-height: max(884px, 100dvh);
+}

@@ -1,0 +1,5 @@
+{
+  "name": "听写助手",
+  "description": "一个帮助学生进行听写练习的助手应用，支持自定义词语、语速、重复次数和间隔时间。",
+  "requestFramePermissions": []
+}
