@@ -13,10 +13,16 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
+    let retryCount = 0;
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
-      const zhVoices = availableVoices.filter(v => v.lang.startsWith('zh'));
-      setVoices(zhVoices);
+      if (availableVoices.length > 0) {
+        const zhVoices = availableVoices.filter(v => v.lang.startsWith('zh'));
+        setVoices(zhVoices);
+      } else if (retryCount < 10) {
+        retryCount++;
+        setTimeout(loadVoices, 200);
+      }
     };
 
     loadVoices();
@@ -26,23 +32,38 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
   }, []);
 
   useEffect(() => {
-    if (voices.length > 0 && !settings.voiceURI) {
-      const defaultVoice = voices.find(v => 
+    if (voices.length > 0 && !settings.voiceName) {
+      // Prioritize known iOS Mandarin voices like Tingting
+      const defaultVoice = voices.find(v => v.name.includes('Tingting') || v.name.includes('Ting-Ting')) ||
+        voices.find(v => 
         v.lang === 'zh-CN' && 
         !v.name.toLowerCase().includes('cantonese') && 
         !v.name.toLowerCase().includes('hk') &&
         !v.name.toLowerCase().includes('tw') &&
-        !v.name.includes('粤')
+        !v.name.includes('粤') &&
+        !v.name.includes('Sin-Ji') &&
+        !v.name.includes('Sinji')
       ) || voices.find(v => v.lang === 'zh-CN') || voices[0];
       
       if (defaultVoice) {
-        onSettingsChange({ ...settings, voiceURI: defaultVoice.voiceURI });
+        onSettingsChange({ ...settings, voiceName: defaultVoice.name });
       }
     }
-  }, [voices, settings.voiceURI, onSettingsChange, settings]);
+  }, [voices, settings.voiceName, onSettingsChange, settings]);
 
   const updateSetting = (key: keyof DictationSettings, value: number | string) => {
     onSettingsChange({ ...settings, [key]: value });
+  };
+
+  const handleTestVoice = () => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance("测试普通话声音，春暖花开");
+    utterance.lang = 'zh-CN';
+    const selectedVoice = voices.find(v => v.name === settings.voiceName);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+    window.speechSynthesis.speak(utterance);
   };
 
   return (
@@ -61,19 +82,25 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
               <p className="text-slate-900 text-base font-medium">朗读声音 (普通话)</p>
             </div>
           </div>
-          <div className="flex w-full items-center gap-4">
+          <div className="flex w-full items-center gap-2">
             <select 
-              value={settings.voiceURI || ''}
-              onChange={(e) => updateSetting('voiceURI', e.target.value)}
+              value={settings.voiceName || ''}
+              onChange={(e) => updateSetting('voiceName', e.target.value)}
               className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-primary/40 outline-none"
             >
               {voices.length === 0 && <option value="">加载声音中...</option>}
               {voices.map(voice => (
-                <option key={voice.voiceURI} value={voice.voiceURI}>
+                <option key={voice.name} value={voice.name}>
                   {voice.name} ({voice.lang})
                 </option>
               ))}
             </select>
+            <button 
+              onClick={handleTestVoice}
+              className="shrink-0 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-bold hover:bg-primary/20 transition-colors active:scale-95"
+            >
+              试听
+            </button>
           </div>
         </div>
 
