@@ -51,8 +51,8 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
         if (settings.voiceName) {
           const selectedVoice = voices.find(v => v.name === settings.voiceName);
           if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            utterance.lang = selectedVoice.lang; // Crucial for iOS
+            utterance.lang = selectedVoice.lang; // Order matters: set lang FIRST
+            utterance.voice = selectedVoice;     // Set voice SECOND
             voiceSet = true;
           }
         } 
@@ -72,12 +72,15 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
           ) || zhVoices.find(v => v.lang === 'zh-CN');
           
           if (defaultVoice) {
-            utterance.voice = defaultVoice;
             utterance.lang = defaultVoice.lang;
+            utterance.voice = defaultVoice;
           } else {
             utterance.lang = 'zh-CN';
           }
         }
+        
+        utterance.volume = 1;
+        utterance.pitch = 1;
         
         utterance.onend = () => resolve();
         utterance.onerror = () => resolve();

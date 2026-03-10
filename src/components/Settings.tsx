@@ -60,14 +60,21 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
     
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance("测试普通话声音，春暖花开");
-      const selectedVoice = voices.find(v => v.name === settings.voiceName);
+      
+      // CRITICAL FOR iOS: Always fetch fresh voice objects from the API.
+      // Do not use the voices from React state, as they might be detached/stale in WebKit.
+      const freshVoices = window.speechSynthesis.getVoices();
+      const selectedVoice = freshVoices.find(v => v.name === settings.voiceName);
       
       if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        utterance.lang = selectedVoice.lang; // Crucial for iOS: lang must match voice.lang
+        utterance.lang = selectedVoice.lang; // Order matters: set lang FIRST
+        utterance.voice = selectedVoice;     // Set voice SECOND
       } else {
         utterance.lang = 'zh-CN';
       }
+      
+      utterance.volume = 1;
+      utterance.pitch = 1;
       
       window.speechSynthesis.speak(utterance);
     }, 50);
