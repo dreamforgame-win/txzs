@@ -19,7 +19,10 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
       try {
         const availableVoices = window.speechSynthesis.getVoices() || [];
         if (availableVoices.length > 0) {
-          const zhVoices = availableVoices.filter(v => v && v.lang && typeof v.lang === 'string' && v.lang.startsWith('zh'));
+          const zhVoices = availableVoices.filter(v => 
+            v && v.lang && typeof v.lang === 'string' && 
+            (v.lang.toLowerCase().includes('zh') || v.lang.toLowerCase().includes('cmn') || v.lang.toLowerCase().includes('chi'))
+          );
           setVoices(zhVoices);
         } else if (retryCount < 10) {
           retryCount++;
@@ -85,6 +88,8 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
         utterance.pitch = 1;
         
         window.speechSynthesis.speak(utterance);
+        // CRITICAL FOR ANDROID: Sometimes the TTS engine gets stuck in a paused state
+        window.speechSynthesis.resume();
       }, 50);
     } catch (e) {
       console.error("Test voice error:", e);
@@ -113,7 +118,7 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
               onChange={(e) => updateSetting('voiceName', e.target.value)}
               className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-primary/40 outline-none"
             >
-              {voices.length === 0 && <option value="">加载声音中...</option>}
+              {voices.length === 0 && <option value="">使用系统默认声音</option>}
               {voices.map(voice => (
                 <option key={voice.name} value={voice.name}>
                   {voice.name} ({voice.lang})
@@ -127,6 +132,17 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
               试听
             </button>
           </div>
+          {voices.length === 0 && (
+            <div className="mt-3 p-3 bg-orange-50 text-orange-700 text-xs rounded-lg border border-orange-100">
+              <p className="font-bold mb-1">⚠️ 无法发声或没有声音选项？</p>
+              <p>部分安卓手机(如小米)可能需要手动开启TTS引擎：</p>
+              <ol className="list-decimal ml-4 mt-1 space-y-1">
+                <li>去手机「设置」搜索「文字转语音」或「TTS」</li>
+                <li>确保首选引擎已选择（如小爱语音引擎）</li>
+                <li>如果仍无声，建议在应用商店下载「Google 文字转语音」并设为默认引擎。</li>
+              </ol>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 bg-white p-4 rounded-xl mb-4 shadow-sm">

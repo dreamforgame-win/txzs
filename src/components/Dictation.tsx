@@ -65,7 +65,10 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
           
           if (!voiceSet) {
             // Fallback to finding a Mandarin voice if none selected
-            const zhVoices = voices.filter(v => v && v.lang && typeof v.lang === 'string' && v.lang.startsWith('zh'));
+            const zhVoices = voices.filter(v => 
+              v && v.lang && typeof v.lang === 'string' && 
+              (v.lang.toLowerCase().includes('zh') || v.lang.toLowerCase().includes('cmn') || v.lang.toLowerCase().includes('chi'))
+            );
             const defaultVoice = zhVoices.find(v => v && v.name && (v.name.includes('Tingting') || v.name.includes('Ting-Ting'))) ||
               zhVoices.find(v => 
               v && v.lang === 'zh-CN' && 
@@ -93,6 +96,8 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
           utterance.onerror = () => resolve();
           
           window.speechSynthesis.speak(utterance);
+          // CRITICAL FOR ANDROID: Sometimes the TTS engine gets stuck in a paused state
+          window.speechSynthesis.resume();
         }, 50);
       } catch (e) {
         console.error("Speech synthesis error:", e);
