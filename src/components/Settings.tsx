@@ -57,13 +57,20 @@ export default function Settings({ settings, onSettingsChange, currentView, onVi
 
   const handleTestVoice = () => {
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance("测试普通话声音，春暖花开");
-    utterance.lang = 'zh-CN';
-    const selectedVoice = voices.find(v => v.name === settings.voiceName);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-    window.speechSynthesis.speak(utterance);
+    
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance("测试普通话声音，春暖花开");
+      const selectedVoice = voices.find(v => v.name === settings.voiceName);
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        utterance.lang = selectedVoice.lang; // Crucial for iOS: lang must match voice.lang
+      } else {
+        utterance.lang = 'zh-CN';
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   };
 
   return (

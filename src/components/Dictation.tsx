@@ -40,39 +40,50 @@ export default function Dictation({ words, settings, onBack }: DictationProps) {
   const speak = (text: string, speed: number): Promise<void> => {
     return new Promise((resolve) => {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'zh-CN';
-      utterance.rate = speed;
       
-      const voices = window.speechSynthesis.getVoices();
-      if (settings.voiceName) {
-        const selectedVoice = voices.find(v => v.name === settings.voiceName);
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
-        }
-      } else {
-        // Fallback to finding a Mandarin voice if none selected
-        const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
-        const defaultVoice = zhVoices.find(v => v.name.includes('Tingting') || v.name.includes('Ting-Ting')) ||
-          zhVoices.find(v => 
-          v.lang === 'zh-CN' && 
-          !v.name.toLowerCase().includes('cantonese') && 
-          !v.name.toLowerCase().includes('hk') &&
-          !v.name.toLowerCase().includes('tw') &&
-          !v.name.includes('粤') &&
-          !v.name.includes('Sin-Ji') &&
-          !v.name.includes('Sinji')
-        ) || zhVoices.find(v => v.lang === 'zh-CN');
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = speed;
         
-        if (defaultVoice) {
-          utterance.voice = defaultVoice;
+        const voices = window.speechSynthesis.getVoices();
+        let voiceSet = false;
+        
+        if (settings.voiceName) {
+          const selectedVoice = voices.find(v => v.name === settings.voiceName);
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang; // Crucial for iOS
+            voiceSet = true;
+          }
+        } 
+        
+        if (!voiceSet) {
+          // Fallback to finding a Mandarin voice if none selected
+          const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+          const defaultVoice = zhVoices.find(v => v.name.includes('Tingting') || v.name.includes('Ting-Ting')) ||
+            zhVoices.find(v => 
+            v.lang === 'zh-CN' && 
+            !v.name.toLowerCase().includes('cantonese') && 
+            !v.name.toLowerCase().includes('hk') &&
+            !v.name.toLowerCase().includes('tw') &&
+            !v.name.includes('粤') &&
+            !v.name.includes('Sin-Ji') &&
+            !v.name.includes('Sinji')
+          ) || zhVoices.find(v => v.lang === 'zh-CN');
+          
+          if (defaultVoice) {
+            utterance.voice = defaultVoice;
+            utterance.lang = defaultVoice.lang;
+          } else {
+            utterance.lang = 'zh-CN';
+          }
         }
-      }
-      
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-      
-      window.speechSynthesis.speak(utterance);
+        
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        
+        window.speechSynthesis.speak(utterance);
+      }, 50);
     });
   };
 
